@@ -87,7 +87,6 @@ function sendEmailToAdmin(userEmail) {
   app.listen(PORT, () => {
     console.log(`Serveur en cours d'exécution sur le port ${PORT}`);
   });
-=======
 }
 
 // Route pour inscrire un utilisateur
@@ -133,4 +132,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Serveur en cours d'exécution sur le port ${PORT}`);
 });
->>>>>>> 0faf05a315c9c53019d08df8bd6ea844fb3ad91d

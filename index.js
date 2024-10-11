@@ -21,71 +21,79 @@ admin.initializeApp({
   databaseURL: `https://${process.env.FIREBASE_PROJECT_ID}.firebaseio.com`
 });
 
+// Initialiser Firestore
+const db = admin.firestore();
+
 // Middleware pour traiter les requêtes JSON
 app.use(express.json());
 
 // Configurer Nodemailer pour l'envoi d'email
 const transporter = nodemailer.createTransport({
-    service: 'gmail', // ou un autre service d'email comme Outlook, etc.
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    }
-  });
-  
-  // Fonction pour envoyer un email
-  function sendEmailToAdmin(userEmail) {
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: process.env.ADMIN_EMAIL, // Email de l'admin
-      subject: 'Nouvel utilisateur inscrit',
-      text: `Un nouvel utilisateur s'est inscrit avec l'email : ${userEmail}`
-    };
-  
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.log('Erreur lors de l\'envoi de l\'email : ', error);
-      } else {
-        console.log('Email envoyé : ' + info.response);
-      }
-    });
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
   }
-  
-  // Route pour inscrire un utilisateur
-  app.post('/signup', async (req, res) => {
-    const { email, password } = req.body;
-  
-    try {
-      // Vérifier si l'utilisateur existe déjà
-      let userRecord;
-      try {
-        userRecord = await admin.auth().getUserByEmail(email);
-        return res.status(400).send({ message: 'L\'email existe déjà.' });
-      } catch (error) {
-        if (error.code !== 'auth/user-not-found') {
-          throw error; // Lancer une autre erreur s'il s'agit d'une autre erreur
-        }
-      }
-  
-      // Créer l'utilisateur si l'email n'existe pas
-      userRecord = await admin.auth().createUser({
-        email: email,
-        password: password,
-      });
-  
-      // Envoyer un email à l'admin après l'inscription
-      sendEmailToAdmin(userRecord.email);
-  
-      res.status(201).send({ message: 'Utilisateur inscrit avec succès', user: userRecord });
-    } catch (error) {
-      console.error('Erreur lors de l\'inscription : ', error);
-      res.status(500).send({ message: 'Erreur lors de l\'inscription' });
+});
+
+// Fonction pour envoyer un email
+function sendEmailToAdmin(userEmail) {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: process.env.ADMIN_EMAIL, // Email de l'admin
+    subject: 'Nouvel utilisateur inscrit',
+    text: `Un nouvel utilisateur s'est inscrit avec l'email : ${userEmail}`
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.log('Erreur lors de l\'envoi de l\'email : ', error);
+    } else {
+      console.log('Email envoyé : ' + info.response);
     }
   });
-  
-  
-  // Lancer le serveur
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
-    console.log(`Serveur en cours d'exécution sur le port ${PORT}`);
-  });
+}
+
+// Route pour inscrire un utilisateur
+app.post('/signup', async (req, res) => {
+  const { firstName, lastName, email, password } = req.body;
+  const role = 'user';
+  const status = 'pending';
+  const registrationDate = new Date();
+
+  try {
+    // Vérifier si l'utilisateur existe déjà dans Firestore
+    const usersRef = db.collection('users');
+    const snapshot = await usersRef.where('email', '==', email).get();
+    if (!snapshot.empty) {
+      return res.status(400).send({ message: 'L\'email existe déjà.' });
+    }
+
+    // Enregistrer l'utilisateur dans la collection "users"
+    const newUser = {
+      firstName,
+      lastName,
+      email,
+      password, // Note : il est recommandé de hasher le mot de passe avant de le sauvegarder
+      role,
+      status,
+      registrationDate
+    };
+
+    await usersRef.add(newUser);
+
+    // Envoyer un email à l'admin après l'inscription
+    sendEmailToAdmin(email);
+
+    res.status(201).send({ message: 'Utilisateur inscrit avec succès', user: newUser });
+  } catch (error) {
+    console.error('Erreur lors de l\'inscription : ', error);
+    res.status(500).send({ message: 'Erreur lors de l\'inscription' });
+  }
+});
+
+// Lancer le serveur
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Serveur en cours d'exécution sur le port ${PORT}`);
+});

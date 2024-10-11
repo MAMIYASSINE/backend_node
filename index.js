@@ -21,6 +21,9 @@ admin.initializeApp({
   databaseURL: `https://${process.env.FIREBASE_PROJECT_ID}.firebaseio.com`
 });
 
+// Initialiser Firestore
+const db = admin.firestore();
+
 // Middleware pour traiter les requêtes JSON
 app.use(express.json());
 
@@ -82,33 +85,6 @@ const transporter = nodemailer.createTransport({
       res.status(500).send({ message: 'Erreur lors de l\'inscription' });
     }
   });
-
-  //Sign-in route
-// app.post('/signin', async (req, res) => {
-//   const { email, password } = req.body;
-
-//   try {
-//     // Get user by email
-//     const userRecord = await admin.auth().getUserByEmail(email);
-
-//     // Compare the password (in a real-world case, you'd hash and compare)
-//     const userPasswordHash = userRecord.passwordHash; // Assume this is stored securely
-//     const isPasswordValid = bcrypt.compareSync(password, userPasswordHash); // Replace this with actual logic for password check
-
-//     if (!isPasswordValid) {
-//       return res.status(401).send({ message: 'Email ou mot de passe incorrect.' });
-//     }
-
-//     // Sign-in successful
-//     res.status(200).send({ message: 'Connexion réussie', user: userRecord });
-//   } catch (error) {
-//     if (error.code === 'auth/user-not-found') {
-//       return res.status(404).send({ message: 'Utilisateur non trouvé.' });
-//     }
-//     console.error('Erreur lors de la connexion : ', error);
-//     res.status(500).send({ message: 'Erreur lors de la connexion' });
-//   }
-// });
   
   
   // Lancer le serveur
